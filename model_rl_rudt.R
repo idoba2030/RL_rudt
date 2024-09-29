@@ -33,9 +33,9 @@ sim.block = function(subject,parameters,cfg){
       
       Qnet = weights[1]*Q_cards_offered + weights[2]*Q_keys
       
-      Qnet_diff=Qnet[2]-Qnet[1]
+      Qnet_diff=Qnet[2]-Qnet[1] #eq.10
 
-      sigma    = sqrt(c * abs(Qnet_diff))
+      sigma    = sqrt(c * abs(Qnet_diff)) #eq.11
       rt = 0
       x  = 0
       while (abs(x) < lambda) {
