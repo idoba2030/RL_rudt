@@ -1,76 +1,38 @@
-#### simulate Rescorla-Wagner block for participant ----
-sim.block = function(subject,parameters,cfg){ 
-  print(paste('subject',subject))
+library(dplyr)
+#### True values ----
+Ntrials = 100
+
+# Free parameters
+alpha             = 0.3    # learning rate     
+c                 = 0.8    # scaling for sigma of the value difference normal dist
+lambda            = 0.3    # threshold for sampler
+theta             = 0.3    # scale parameter for gamma
+non_decision_time = 0.2
+
+#### Generate decision ----
+
+rts     = rep(0, Ntrials)
+choices = rep(0, Ntrials)
+ds = rep(0, Ntrials)
+reward_probs=c(0.3,0.8)
+
+Qvalues= rep(0.5, 2)
+for (trial in 1:Ntrials) {
+  d       = Qvalues[2] - Qvalues[1]
+  sigma   = sqrt(c * abs(d)) +0.3 #0.3 to make it run.
+  rt = 0
+  x  = 0
+  while (abs(x) < lambda) {
+    rt = rt + rgamma(1, shape = 2, scale = theta)
+    x  = rnorm(1, d, sigma)
+  }
   
-  #pre-allocation
-  #set parameters
-  alpha = parameters['alpha']
-  lambda = parameters['lambda'] #threshold
-  c  = parameters['c'] #scaling of sigma
-  theta = parameters['theta'] #scale of gamma dist
-  tau  = parameters['tau'] #non decision time
-
-  #set initial var
-  Nblocks            = cfg$Nblocks
-  Ntrials            = cfg$Ntrials
-  Ndims              = cfg$Ndims
-  Narms              = cfg$Narms
-  Nraffle            = cfg$Nraffle
-  expvalues          = cfg$rndwlk
-  df                 =data.frame()
-  
-  prior_relevant=c(1,0) #instructions
-  weight_uniform=rep(1/Ndims,Ndims) #no instructions
-  weights= 1* prior_relevant + 0 * weight_uniform #example
-  
-  for (block in 1:Nblocks){
-    Q_cards= rep(0.5, Narms)
-    Q_keys = rep(0.5, Nraffle)
-    for (trial in 1:Ntrials){
-      
-      options=sample(1:4,2)
-      Q_cards_offered = Q_cards[options] #use their Q values
-      
-      Qnet = weights[1]*Q_cards_offered + weights[2]*Q_keys
-      
-      Qnet_diff=Qnet[2]-Qnet[1] #eq.10
-
-      sigma    = sqrt(c * abs(Qnet_diff)) #eq.11
-      rt = 0
-      x  = 0
-      while (abs(x) < lambda) {
-        rt = rt + rgamma(1, shape = 2, scale = theta)
-        x  = rnorm(1, mean=Qnet_diff, sd=sigma)
-      }
-      rt     = rt + tau
-      ch_key = if_else(sign(x)==1,2,1)
-      ch_card=options[ch_key]
-      #outcome 
-      reward = sample(0:1, 1, prob = c(1 - expvalues[ch_card, trial], expvalues[ch_card, trial])) #reward according to card
-      
-      #calculate PEs
-      PE_keys= reward-Q_keys[ch_key]
-      PE_cards=reward-Q_cards[ch_card]
-      
-      #create data for current trials
-      dfnew=data.frame(subject=subject,
-                       block=block,
-                       trial = trial,
-                       first_trial_in_block=if_else(trial==1,1,0),
-                       rt = rt,        
-                       card_left=options[1],
-                       card_right=options[2],
-                       ch_key,
-                       ch_card,
-                       Qnet_diff
-                       )
-
-      
-      Q_cards[ch_card] = Q_cards[ch_card]  + alpha * PE_cards
-      Q_keys[ch_key] = Q_keys[ch_key] +alpha * PE_keys
-      df=rbind(df,dfnew)
-
-    }
-  }     
-  return (df)
+  ch_card = if_else(sign(x)==1,2,1)
+  rt     = rt + non_decision_time
+  reward = sample(0:1, 1, prob = c(1-reward_probs[ch_card],reward_probs[ch_card])) #reward according to card
+  choices[trial] = chosen_card
+  rts[trial]     = rt
+  ds[trial]=d
+  PE=reward-Qvalues[ch_card]
+  Qvalues[ch_card] = Qvalues[ch_card]  + alpha * PE
 }
