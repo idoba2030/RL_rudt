@@ -21,7 +21,7 @@ sim.block = function(subject,parameters,cfg){
   
   prior_relevant=c(1,0) #instructions
   weight_uniform=rep(1/Ndims,Ndims) #no instructions
-  weights= 1* prior_relevant + 0 * weight_uniform
+  weights= 1* prior_relevant + 0 * weight_uniform #example
   
   for (block in 1:Nblocks){
     Q_cards= rep(0.5, Narms)
